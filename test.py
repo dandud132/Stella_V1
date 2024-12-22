@@ -6,9 +6,13 @@ import torch
 import sounddevice as sd
 import numpy as np
 import keyboard  # Библиотека для обработки нажатий клавиш
+import time  # Модуль для измерения времени
+import asyncio  # Модуль для асинхронного выполнения
+from concurrent.futures import ThreadPoolExecutor
 
 def voice_Stella():
-    device = torch.device('cpu')
+    start_time = time.time()  # Начало измерения времени
+    device = torch.device('cuda')
     torch.set_num_threads(4)
     local_file = 'v4_ru.pt'
     speaker = 'kseniya'  # 'aidar', 'baya', 'kseniya', 'xenia', 'random'
@@ -20,19 +24,28 @@ def voice_Stella():
     chunks = [a[i:i + 1000] for i in range(0, len(a), 1000)]
     audio = np.array([])
 
-    for chunk in chunks:
-        audio_chunk = model.apply_tts(text=chunk, speaker=speaker, sample_rate=sample_rate)
-        audio = np.concatenate((audio, audio_chunk.numpy()))
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(model.apply_tts, text=chunk, speaker=speaker, sample_rate=sample_rate) for chunk in chunks]
+        for future in futures:
+            audio_chunk = future.result()
+            audio = np.concatenate((audio, audio_chunk.numpy()))
 
-    # Воспроизведение аудио
+    end_time = time.time()  # Конец измерения времени
+    print(f"Время, затраченное на озвучку: {end_time - start_time} секунд")
+
+    # Асинхронное воспроизведение аудио
+    asyncio.run(play_audio(audio, sample_rate))
+
+async def play_audio(audio, sample_rate):
     sd.play(audio, samplerate=sample_rate)
+    await asyncio.sleep(len(audio) / sample_rate)
     sd.wait()  # Ожидание завершения воспроизведения
 
 def vosk_rec():
     model = vosk.Model("vosk_model")
     recognizer = vosk.KaldiRecognizer(model, 16000)
     p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
+    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
     stream.start_stream()
     while True:
         data = stream.read(4000, exception_on_overflow=False)
@@ -58,8 +71,7 @@ a = ''
 
 def ask_gpt(messages) -> str:
     response = g4f.ChatCompletion.create(
-        model=g4f.models.gpt_4
-        ,
+        model=g4f.models.gpt_4,
         messages=messages)
     global a
     a = response
