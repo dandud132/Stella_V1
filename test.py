@@ -5,13 +5,10 @@ import pyaudio
 import torch
 import sounddevice as sd
 import numpy as np
-import keyboard  # Библиотека для обработки нажатий клавиш
-import time  # Модуль для измерения времени
-import asyncio  # Модуль для асинхронного выполнения
 from concurrent.futures import ThreadPoolExecutor
+text_to_tts = ''
 
 def voice_Stella():
-    start_time = time.time()  # Начало измерения времени
     device = torch.device('cuda')
     torch.set_num_threads(4)
     local_file = 'v4_ru.pt'
@@ -21,7 +18,7 @@ def voice_Stella():
     model.to(device)
 
     # Разбиваем текст на части по 1000 символов
-    chunks = [a[i:i + 1000] for i in range(0, len(a), 1000)]
+    chunks = [text_to_tts[i:i + 1000] for i in range(0, len(text_to_tts), 1000)]
     audio = np.array([])
 
     with ThreadPoolExecutor() as executor:
@@ -30,61 +27,45 @@ def voice_Stella():
             audio_chunk = future.result()
             audio = np.concatenate((audio, audio_chunk.numpy()))
 
-    end_time = time.time()  # Конец измерения времени
-    print(f"Время, затраченное на озвучку: {end_time - start_time} секунд")
-
-    # Асинхронное воспроизведение аудио
-    asyncio.run(play_audio(audio, sample_rate))
-
-async def play_audio(audio, sample_rate):
+    # Воспроизведение аудио
     sd.play(audio, samplerate=sample_rate)
-    await asyncio.sleep(len(audio) / sample_rate)
     sd.wait()  # Ожидание завершения воспроизведения
+
+def ask_gpt(messages) -> str:
+    global text_to_tts
+    response = g4f.ChatCompletion.create(
+        model=g4f.models.gpt_4,
+        messages=messages
+    )
+    text_to_tts = response
+    return response
+
+def chatting_mode():
+    start_prompt = "role-playing game 16 yars now girl-boyfriend relationship: You're my girlfriend, and I'm your boyfriend, you talk to me, you're funny, you like to flirt. Answer as much as possible as a person, answer only in Russian. Now start the conversation with the phrase: hi, nice guy"
+
+    messages = [{"role": "user", "content": start_prompt}]
+    messages.append({"role": "assistant", "content": ask_gpt(messages)})
+    voice_Stella()
+
+    while True:
+        messages.append({"role": "user", "content": vosk_rec()})
+        messages.append({"role": "assistant", "content": ask_gpt(messages)})
+        voice_Stella()
 
 def vosk_rec():
     model = vosk.Model("vosk_model")
     recognizer = vosk.KaldiRecognizer(model, 16000)
     p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
+    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
     stream.start_stream()
     while True:
         data = stream.read(4000, exception_on_overflow=False)
         if recognizer.AcceptWaveform(data):
             answer = recognizer.Result()
             text = json.loads(answer)["text"]
-            if text != '':
+            if text:
                 print(text)
-                print("Нажмите Enter для подтверждения, Backspace для повторного распознавания или Shift для ручного ввода.")
-                while True:
-                    if keyboard.is_pressed('enter'):
-                        print("Отправлено")
-                        return text
-                    elif keyboard.is_pressed('backspace'):
-                        print("Говорите...")
-                        break
-                    elif keyboard.is_pressed('shift'):
-                        manual_input = input("Введите текст вручную: ")
-                        print("Отправлено")
-                        return manual_input
-
-a = ''
-
-def ask_gpt(messages) -> str:
-    response = g4f.ChatCompletion.create(
-        model=g4f.models.gpt_4,
-        messages=messages)
-    global a
-    a = response
-    return response
-
-start_prompt = "role-playing game 16 yars now girl-boyfriend relationship: You're my girlfriend, and I'm your boyfriend, you talk to me, you're funny, you like to flirt. Answer as much as possible as a person, answer only in Russian. Now start the conversation with the phrase: hi, nice guy"
-
-messages = []
-messages.append({"role": "user", "content": start_prompt})
-messages.append({"role": "assistant", "content": ask_gpt(messages)})
-voice_Stella()
-
-while True:
-    messages.append({"role": "user", "content": vosk_rec()})
-    messages.append({"role": "assistant", "content": ask_gpt(messages)})
-    voice_Stella()
+                if text == 'давай поболтаем':
+                    chatting_mode()
+# Начало общения
+chatting_mode()
