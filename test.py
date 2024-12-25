@@ -6,6 +6,7 @@ import torch
 import sounddevice as sd
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
+
 text_to_tts = ''
 
 def voice_Stella():
