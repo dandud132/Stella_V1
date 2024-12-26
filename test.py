@@ -5,10 +5,44 @@ import pyaudio
 import torch
 import sounddevice as sd
 import numpy as np
+import pickle
 from concurrent.futures import ThreadPoolExecutor
 
+import words
+
+with open('vectorizer.pkl', 'rb') as f: vectorizer = pickle.load(f)
+with open('model.pkl', 'rb') as f: clf = pickle.load(f)
 text_to_tts = ''
 recognizer_active = True
+
+def recognize(data, vectorizer, clf):
+    '''
+    Анализ распознанной речи
+    '''
+
+    #проверяем есть ли имя бота в data, если нет, то return
+    trg = words.TRIGGERS.intersection(data.split())
+    if not trg:
+        return
+
+    #удаляем имя бота из текста
+    data.replace(list(trg)[0], '')
+
+    #получаем вектор полученного текста
+    #сравниваем с вариантами, получая наиболее подходящий ответ
+    text_vector = vectorizer.transform([data]).toarray()[0]
+    answer = clf.predict([text_vector])[0]
+
+    #получение имени функции из ответа из data_set
+    func_name = answer.split()[0]
+
+    #озвучка ответа из модели data_set
+    text_to_tts = answer.replace(func_name, '')
+    voice_Stella()
+
+
+    #запуск функции из skills
+    exec(func_name + '()')
 
 def voice_Stella():
     global recognizer_active
@@ -78,10 +112,8 @@ def vosk_rec():
             answer = recognizer.Result()
             text = json.loads(answer)["text"]
             if text:
-                print(text)
-                if text == 'тест':
-                    chatting_mode()
-                    break
+                recognize(data=text, vectorizer=vectorizer, clf=clf)
+
 
 def chatting_rec():
     model = vosk.Model("vosk_model")
