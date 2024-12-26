@@ -8,8 +8,12 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 
 text_to_tts = ''
+recognizer_active = True
 
 def voice_Stella():
+    global recognizer_active
+    recognizer_active = False  # Останавливаем распознавание речи
+
     device = torch.device('cuda')
     torch.set_num_threads(4)
     local_file = 'v4_ru.pt'
@@ -32,6 +36,8 @@ def voice_Stella():
     sd.play(audio, samplerate=sample_rate)
     sd.wait()  # Ожидание завершения воспроизведения
 
+    recognizer_active = True  # Возобновляем распознавание речи
+
 def ask_gpt(messages) -> str:
     global text_to_tts
     response = g4f.ChatCompletion.create(
@@ -49,11 +55,35 @@ def chatting_mode():
     voice_Stella()
 
     while True:
-        messages.append({"role": "user", "content": vosk_rec()})
-        messages.append({"role": "assistant", "content": ask_gpt(messages)})
-        voice_Stella()
+        user_input = chatting_rec()
+        if user_input:
+            messages.append({"role": "user", "content": user_input})
+            messages.append({"role": "assistant", "content": ask_gpt(messages)})
+            voice_Stella()
+        else:
+            break
+
+    vosk_rec()
 
 def vosk_rec():
+    global recognizer_active
+    model = vosk.Model("vosk_model")
+    recognizer = vosk.KaldiRecognizer(model, 16000)
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
+    stream.start_stream()
+    while True:
+        data = stream.read(4000, exception_on_overflow=False)
+        if recognizer_active and recognizer.AcceptWaveform(data):
+            answer = recognizer.Result()
+            text = json.loads(answer)["text"]
+            if text:
+                print(text)
+                if text == 'тест':
+                    chatting_mode()
+                    break
+
+def chatting_rec():
     model = vosk.Model("vosk_model")
     recognizer = vosk.KaldiRecognizer(model, 16000)
     p = pyaudio.PyAudio()
@@ -64,9 +94,11 @@ def vosk_rec():
         if recognizer.AcceptWaveform(data):
             answer = recognizer.Result()
             text = json.loads(answer)["text"]
-            if text:
+            if text != 'пока':
                 print(text)
-                if text == 'давай поболтаем':
-                    chatting_mode()
-# Начало общения
-chatting_mode()
+                return text
+            else:
+                print(text)
+                return None
+
+vosk_rec()
