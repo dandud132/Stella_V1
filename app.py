@@ -23,6 +23,7 @@ def recognize(data, vectorizer, clf):
     #проверяем есть ли имя бота в data, если нет, то return
     trg = words.TRIGGERS.intersection(data.split())
     if not trg:
+        print('7')
         return
 
     #удаляем имя бота из текста
@@ -37,6 +38,7 @@ def recognize(data, vectorizer, clf):
     func_name = answer.split()[0]
 
     #озвучка ответа из модели data_set
+    global text_to_tts
     text_to_tts = answer.replace(func_name, '')
     voice_Stella()
 
@@ -57,7 +59,7 @@ def voice_Stella():
     model.to(device)
 
     # Разбиваем текст на части по 1000 символов
-    chunks = [text_to_tts[i:i + 1000] for i in range(0, len(text_to_tts), 1000)]
+    chunks = [text_to_tts[i:i + 1100] for i in range(0, len(text_to_tts), 1000)]
     audio = np.array([])
 
     with ThreadPoolExecutor() as executor:
@@ -114,7 +116,6 @@ def vosk_rec():
             if text:
                 print(text)
                 recognize(data=text, vectorizer=vectorizer, clf=clf)
-
 
 def chatting_rec():
     model = vosk.Model("vosk_model")
