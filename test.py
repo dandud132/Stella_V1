@@ -7,7 +7,7 @@ import sounddevice as sd
 import numpy as np
 import pickle
 from concurrent.futures import ThreadPoolExecutor
-
+from skills import *
 import words
 
 with open('vectorizer.pkl', 'rb') as f: vectorizer = pickle.load(f)
@@ -112,6 +112,7 @@ def vosk_rec():
             answer = recognizer.Result()
             text = json.loads(answer)["text"]
             if text:
+                print(text)
                 recognize(data=text, vectorizer=vectorizer, clf=clf)
 
 
