@@ -29,6 +29,7 @@ def recognize(data, vectorizer, clf):
     trg = words.TRIGGERS.intersection(data.split())
     if not trg:
         return
+    print(7)
 
     data = data.replace(list(trg)[0], '')
     text_vector = vectorizer.transform([data]).toarray()[0]
@@ -46,10 +47,10 @@ async def voice_Stella():
     recognizer_active = False
 
     device = torch.device('cuda')
-    torch.set_num_threads(4)
+    torch.set_num_threads(30)
     local_file = 'v4_ru.pt'
     speaker = 'kseniya'
-    sample_rate = 24000
+    sample_rate = 48000
     model = torch.package.PackageImporter(local_file).load_pickle("tts_models", "model")
     model.to(device)
 
@@ -80,6 +81,41 @@ def ask_gpt(messages) -> str:
     text_to_tts = response
     return response
 
+def vosk_rec():
+    global recognizer_active
+    model = vosk.Model("vosk_model")
+    recognizer = vosk.KaldiRecognizer(model, 16000)
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
+    stream.start_stream()
+    while True:
+        data = stream.read(4000, exception_on_overflow=False)
+        if recognizer_active and recognizer.AcceptWaveform(data):
+            answer = recognizer.Result()
+            text = json.loads(answer)["text"]
+            if text:
+                if text == 'давай поболтаем':
+                    chatting_mode()
+                else:
+                    print(text)
+                    recognize(data=text, vectorizer=vectorizer, clf=clf)
+
+def chatting_rec():
+    model = vosk.Model("vosk_model")
+    recognizer = vosk.KaldiRecognizer(model, 16000)
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
+    stream.start_stream()
+    while True:
+        data = stream.read(4000, exception_on_overflow=False)
+        if recognizer.AcceptWaveform(data):
+            answer = recognizer.Result()
+            text = json.loads(answer)["text"]
+            if text != 'пока':
+                return text
+            else:
+                return None
+
 def chatting_mode():
     start_prompt = "role-playing game 16 yars now girl-boyfriend relationship: You're my girlfriend, and I'm your boyfriend, you talk to me, you're funny, you like to flirt. Answer as much as possible as a person, answer only in Russian. Now start the conversation with the phrase: hi, nice guy"
 
@@ -98,35 +134,4 @@ def chatting_mode():
 
     vosk_rec()
 
-def vosk_rec():
-    global recognizer_active
-    model = vosk.Model("vosk_model")
-    recognizer = vosk.KaldiRecognizer(model, 16000)
-    p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
-    stream.start_stream()
-    while True:
-        data = stream.read(4000, exception_on_overflow=False)
-        if recognizer_active and recognizer.AcceptWaveform(data):
-            answer = recognizer.Result()
-            text = json.loads(answer)["text"]
-            if text:
-                recognize(data=text, vectorizer=vectorizer, clf=clf)
-
-def chatting_rec():
-    model = vosk.Model("vosk_model")
-    recognizer = vosk.KaldiRecognizer(model, 16000)
-    p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
-    stream.start_stream()
-    while True:
-        data = stream.read(4000, exception_on_overflow=False)
-        if recognizer.AcceptWaveform(data):
-            answer = recognizer.Result()
-            text = json.loads(answer)["text"]
-            if text != 'пока':
-                return text
-            else:
-                return None
-
-recognize(data='стелла браузер', vectorizer=vectorizer, clf=clf)
+vosk_rec()
