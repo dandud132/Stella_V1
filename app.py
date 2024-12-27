@@ -7,7 +7,6 @@ import sounddevice as sd
 import numpy as np
 import pickle
 from concurrent.futures import ThreadPoolExecutor
-from skills import *
 import words
 
 with open('vectorizer.pkl', 'rb') as f: vectorizer = pickle.load(f)

@@ -4,14 +4,11 @@ import pickle
 from concurrent.futures import ThreadPoolExecutor
 
 import g4f
-import numpy as np
 import pyaudio
-import sounddevice as sd
 import torch
 import vosk
 from pydub import AudioSegment
 from pydub.playback import play
-
 from skills import *
 import words
 
@@ -47,10 +44,10 @@ async def voice_Stella():
     recognizer_active = False
 
     device = torch.device('cuda')
-    torch.set_num_threads(30)
+    torch.set_num_threads(4)
     local_file = 'v4_ru.pt'
     speaker = 'kseniya'
-    sample_rate = 48000
+    sample_rate = 24000
     model = torch.package.PackageImporter(local_file).load_pickle("tts_models", "model")
     model.to(device)
 

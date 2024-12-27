@@ -2,6 +2,7 @@ import os
 import webbrowser
 import sys
 import subprocess
+import os
 
 def browser():
     '''Открывает браузер заданнный по уполчанию в системе с url указанным здесь'''
@@ -26,3 +27,10 @@ def offBot():
 def passive():
     '''Функция заглушка при простом диалоге с ботом'''
     pass
+
+def run_yandexmusic():
+    os.startfile('yndmusic.exe.lnk')
+def run_cmd():
+    os.startfile('cmd.exe.lnk')
+def run_discord():
+    os.startfile('Discord_run.lnk')
