@@ -20,8 +20,7 @@ def browser():
 # Функция для выключения компьютера
 def offpc():
     play_audio('base_answers/shutting_down_computer.mp3')
-    # os.system('shutdown \s')
-    print('ПК был бы выключен, но команде # в коде мешает;)))')
+    os.system('shutdown \s')
 
 # Функция для отключения бота
 def offBot():
