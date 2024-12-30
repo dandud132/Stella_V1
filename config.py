@@ -1,0 +1,1 @@
+vosk_rec_text = ''

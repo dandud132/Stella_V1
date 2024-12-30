@@ -7,8 +7,8 @@ import g4f
 import pyaudio
 import torch
 import vosk
-from pydub import AudioSegment
-from pydub.playback import play
+
+import config
 from skills import *
 import words
 
@@ -26,7 +26,7 @@ def recognize(data, vectorizer, clf):
     trg = words.TRIGGERS.intersection(data.split())
     if not trg:
         return
-    print(7)
+    print('распознано')
 
     data = data.replace(list(trg)[0], '')
     text_vector = vectorizer.transform([data]).toarray()[0]
@@ -94,6 +94,7 @@ def vosk_rec():
                 if text == 'давай поболтаем':
                     chatting_mode()
                 else:
+                    config.vosk_rec_text = text
                     print(text)
                     recognize(data=text, vectorizer=vectorizer, clf=clf)
 
