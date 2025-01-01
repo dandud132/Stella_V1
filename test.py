@@ -131,5 +131,4 @@ def chatting_mode():
             break
 
     vosk_rec()
-
 vosk_rec()
