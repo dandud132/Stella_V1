@@ -32,6 +32,7 @@ data_set = {
 'запусти общагу': 'run_discord',
 'запускай общагу': 'run_discord',
 'погода' : 'weather',
-'найди' : 'search_browser'
+'найди' : 'search_browser',
+'видео' : 'search_youtube'
 
 }
