@@ -23,6 +23,6 @@ def generate_audio(text, output_file):
 
 
 # Пример использования функции
-text = "Сейчас найду на ютуб"
-output_file = "search_youtube.wav"
+text = "снимаю паузу"
+output_file = "base_answers/play.wav"
 generate_audio(text, output_file)

@@ -10,7 +10,11 @@ import vosk
 from torch.cuda.amp import autocast
 from skills import *
 import words
+import threading
 from pydub import AudioSegment
+from pydub.playback import play
+import soundfile as sf
+import sounddevice as sd
 
 # Загрузка моделей и векторизатора
 with open('vectorizer.pkl', 'rb') as f:
@@ -23,9 +27,27 @@ text_to_tts = ''
 recognizer_active = True
 trigger_active = False
 
-def play_audio(file_path):
+
+
+def play_audio_segment(file_path):
     audio = AudioSegment.from_mp3(file_path)
     play(audio)
+
+def play_sounddevice(file_path, device_index):
+    data, samplerate = sf.read(file_path)
+    sd.default.device = device_index  # Указываем индекс устройства
+    sd.play(data, samplerate)
+    sd.wait()
+
+def play_audio(file_path, device_index):
+    thread1 = threading.Thread(target=play_audio_segment, args=(file_path,))
+    thread2 = threading.Thread(target=play_sounddevice, args=(file_path, device_index))
+
+    thread1.start()
+    thread2.start()
+
+    thread1.join()
+    thread2.join()
 
 def reset_trigger():
     global trigger_active
@@ -149,6 +171,6 @@ def chatting_mode():
 
     vosk_rec()
 
-play_audio('base_answers/first_hello.wav')
+play_audio('base_answers/first_hello.wav',27)
 
 vosk_rec()

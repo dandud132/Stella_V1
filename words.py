@@ -33,6 +33,10 @@ data_set = {
 'запускай общагу': 'run_discord',
 'погода' : 'weather',
 'найди' : 'search_browser',
-'видео' : 'search_youtube'
+'видео' : 'search_youtube',
+'следующий трек' : 'next_track',
+'предыдущий трек' : 'past_track',
+'пауза' : 'pause',
+'играй' : 'play_m'
 
 }
