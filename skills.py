@@ -94,3 +94,8 @@ def seems_like_it():
     play_audio('base_answers/seems_like_it.mp3')#
 def i_can_do_many_things():
     play_audio('base_answers/i_can_do_many_things.mp3')
+
+# Функция для запуска YouTube и поиска видео
+def search_youtube(query):
+    play_audio('base_answers/search_youtube.mp3')
+    webbrowser.open(f'https://www.youtube.com/results?search_query={query}', new=2)

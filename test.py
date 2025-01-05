@@ -7,6 +7,8 @@ import g4f
 import pyaudio
 import torch
 import vosk
+from torch.cuda.amp import autocast
+from torch.utils.data import DataLoader, TensorDataset
 
 import config
 from skills import *
@@ -43,7 +45,7 @@ async def voice_Stella():
     global recognizer_active
     recognizer_active = False
 
-    device = torch.device('cuda')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     torch.set_num_threads(4)
     local_file = 'v4_ru.pt'
     speaker = 'kseniya'
@@ -57,14 +59,15 @@ async def voice_Stella():
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(model.apply_tts, text=chunk, speaker=speaker, sample_rate=sample_rate) for chunk in chunks]
         for future in futures:
-            audio_chunk = future.result().numpy()
-            audio_chunk = AudioSegment(
-                audio_chunk.tobytes(),
-                frame_rate=sample_rate,
-                sample_width=audio_chunk.dtype.itemsize,
-                channels=1
-            )
-            audio += audio_chunk + AudioSegment.silent(duration=100)
+            with autocast():
+                audio_chunk = future.result().numpy()
+                audio_chunk = AudioSegment(
+                    audio_chunk.tobytes(),
+                    frame_rate=sample_rate,
+                    sample_width=audio_chunk.dtype.itemsize,
+                    channels=1
+                )
+                audio += audio_chunk + AudioSegment.silent(duration=100)
 
     play(audio)
     recognizer_active = True
@@ -85,18 +88,20 @@ def vosk_rec():
     p = pyaudio.PyAudio()
     stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
     stream.start_stream()
-    while True:
-        data = stream.read(4000, exception_on_overflow=False)
-        if recognizer_active and recognizer.AcceptWaveform(data):
-            answer = recognizer.Result()
-            text = json.loads(answer)["text"]
-            if text:
-                if text == 'давай поболтаем':
-                    chatting_mode()
-                else:
-                    config.vosk_rec_text = text
-                    print(text)
-                    recognize(data=text, vectorizer=vectorizer, clf=clf)
+    with ThreadPoolExecutor() as executor:
+        while True:
+            data = stream.read(4000, exception_on_overflow=False)
+            if recognizer_active and recognizer.AcceptWaveform(data):
+                future = executor.submit(recognizer.Result)
+                answer = future.result()
+                text = json.loads(answer)["text"]
+                if text:
+                    if text == 'давай поболтаем':
+                        chatting_mode()
+                    else:
+                        config.vosk_rec_text = text
+                        print(text)
+                        recognize(data=text, vectorizer=vectorizer, clf=clf)
 
 def chatting_rec():
     model = vosk.Model("vosk_model")
