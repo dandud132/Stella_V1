@@ -15,6 +15,7 @@ from pydub import AudioSegment
 from pydub.playback import play
 import soundfile as sf
 import sounddevice as sd
+device_index = 3
 
 # Загрузка моделей и векторизатора
 with open('vectorizer.pkl', 'rb') as f:
@@ -171,6 +172,6 @@ def chatting_mode():
 
     vosk_rec()
 
-play_audio('base_answers/first_hello.wav',27)
+play_audio('base_answers/first_hello.wav',device_index)
 
 vosk_rec()
