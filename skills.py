@@ -12,7 +12,7 @@ import sounddevice as sd
 
 
 
-device_index = 27
+device_index = 11
 # Функция для воспроизведения аудио
 def play_audio_segment(file_path):
     audio = AudioSegment.from_mp3(file_path)
