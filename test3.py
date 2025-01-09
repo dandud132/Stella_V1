@@ -8,29 +8,40 @@ import pyaudio
 import torch
 import vosk
 from torch.cuda.amp import autocast
-
-import config
-import  skills
+from skills import *
 import words
 import threading
 from pydub import AudioSegment
 from pydub.playback import play
 import soundfile as sf
 import sounddevice as sd
+
 device_index = 11
 
-# Загрузка моделей и векторизатора
-with open('vectorizer.pkl', 'rb') as f:
-    vectorizer = pickle.load(f)
+# Функция инициализации
+def initialize():
+    global vectorizer, clf, model, recognizer, p, stream
 
-with open('model.pkl', 'rb') as f:
-    clf = pickle.load(f)
+    # Загрузка моделей и векторизатора
+    with open('vectorizer.pkl', 'rb') as f:
+        vectorizer = pickle.load(f)
+
+    with open('model.pkl', 'rb') as f:
+        clf = pickle.load(f)
+
+    # Загрузка модели Vosk
+    model = vosk.Model("vosk_model")
+    recognizer = vosk.KaldiRecognizer(model, 16000)
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
+    stream.start_stream()
+
+# Вызов функции инициализации перед основным процессом
+initialize()
 
 text_to_tts = ''
 recognizer_active = True
 trigger_active = False
-
-
 
 def play_audio_segment(file_path):
     audio = AudioSegment.from_mp3(file_path)
@@ -120,12 +131,8 @@ def ask_gpt(messages) -> str:
 
 def vosk_rec():
     global recognizer_active
-    model = vosk.Model("vosk_model")
-    recognizer = vosk.KaldiRecognizer(model, 16000)
-    p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
-    stream.start_stream()
     with ThreadPoolExecutor() as executor:
+        print('говорите')
         while True:
             data = stream.read(4000, exception_on_overflow=False)
             if recognizer_active and recognizer.AcceptWaveform(data):
@@ -174,6 +181,6 @@ def chatting_mode():
 
     vosk_rec()
 
-play_audio('base_answers/first_hello.wav',device_index)
+play_audio('base_answers/first_hello.wav', device_index)
 
 vosk_rec()
